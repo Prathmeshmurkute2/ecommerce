@@ -10,11 +10,12 @@ import java.util.List;
 
 @Repository
 public interface CartItemRepository extends JpaRepository<CartItem, Long> {
-    CartItem findByUserAndProduct(User user, Product product);
 
-    void deleteByUserAndProduct(User user, Product product);
+    CartItem findByUserAndProduct(User user, Product product);
 
     List<CartItem> findByUser(User user);
 
-    void deleteByUser();
+    void deleteByUserAndProduct(User user, Product product);
+
+    void deleteByUser(User user);
 }

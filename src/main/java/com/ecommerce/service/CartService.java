@@ -83,7 +83,8 @@ public class CartService {
             existingCartItem.setQuantity(newQuantity);
 
             BigDecimal totalPrice =
-                    product.getPrice().multiply(BigDecimal.valueOf(newQuantity));
+                    product.getPrice()
+                            .multiply(BigDecimal.valueOf(newQuantity));
 
             existingCartItem.setPrice(totalPrice);
 
@@ -115,40 +116,64 @@ public class CartService {
     }
 
     public boolean deleteItemFrom(String userId, long productId) {
-        Optional<Product> productOpt = productRepository.findById(productId);
-        Optional<User> userOpt =userRepository.findById(Long.valueOf(userId));
 
-        if(productOpt.isPresent() && userOpt.isPresent()) {
-            cartItemRepository.deleteByUserAndProduct(userOpt.get(), productOpt.get());
-            return true;
-
+        if (userId == null || userId.isBlank()) {
+            return false;
         }
+
+        Long userIdLong;
+
+        try {
+            userIdLong = Long.valueOf(userId);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+
+        Optional<Product> productOpt =
+                productRepository.findById(productId);
+
+        Optional<User> userOpt =
+                userRepository.findById(userIdLong);
+
+        if (productOpt.isPresent() && userOpt.isPresent()) {
+
+            cartItemRepository.deleteByUserAndProduct(
+                    userOpt.get(),
+                    productOpt.get()
+            );
+
+            return true;
+        }
+
         return false;
     }
 
+    // Used by Controller to return cart information
     public List<CartItemResponse> getCartItems(String userId) {
-        if(userId==null || userId.isBlank()){
+
+        if (userId == null || userId.isBlank()) {
             return List.of();
         }
 
         Long userIdLong;
 
-        try{
-            userIdLong= Long.valueOf(userId);
-
-        }catch(NumberFormatException e){
+        try {
+            userIdLong = Long.valueOf(userId);
+        } catch (NumberFormatException e) {
             return List.of();
         }
 
-        Optional<User> userOpt= userRepository.findById(userIdLong);
+        Optional<User> userOpt =
+                userRepository.findById(userIdLong);
 
-        if(userOpt.isEmpty()){
+        if (userOpt.isEmpty()) {
             return List.of();
         }
 
-        User user= userOpt.get();
+        User user = userOpt.get();
 
-        List<CartItem> cartItems = cartItemRepository.findByUser(user);
+        List<CartItem> cartItems =
+                cartItemRepository.findByUser(user);
 
         return cartItems.stream()
                 .map(cartItem -> new CartItemResponse(
@@ -160,9 +185,51 @@ public class CartService {
                 .toList();
     }
 
+    // Used internally by OrderService
+    public List<CartItem> getCartItemEntities(String userId) {
+
+        if (userId == null || userId.isBlank()) {
+            return List.of();
+        }
+
+        Long userIdLong;
+
+        try {
+            userIdLong = Long.valueOf(userId);
+        } catch (NumberFormatException e) {
+            return List.of();
+        }
+
+        Optional<User> userOpt =
+                userRepository.findById(userIdLong);
+
+        if (userOpt.isEmpty()) {
+            return List.of();
+        }
+
+        User user = userOpt.get();
+
+        return cartItemRepository.findByUser(user);
+    }
+
+    // Clear all cart items for a user
     public void clearCart(String userId) {
-        userRepository.findById(Long.valueOf(userId)).ifPresent(user ->
-                cartItemRepository.deleteByUser(userId));
+
+        if (userId == null || userId.isBlank()) {
+            return;
+        }
+
+        Long userIdLong;
+
+        try {
+            userIdLong = Long.valueOf(userId);
+        } catch (NumberFormatException e) {
+            return;
+        }
+
+        userRepository.findById(userIdLong)
+                .ifPresent(user ->
+                        cartItemRepository.deleteByUser(user)
+                );
     }
 }
-

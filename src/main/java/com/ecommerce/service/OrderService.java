@@ -2,54 +2,76 @@ package com.ecommerce.service;
 
 import com.ecommerce.dto.OrderItemDTO;
 import com.ecommerce.dto.OrderResponse;
-import com.ecommerce.model.*;
+import com.ecommerce.model.CartItem;
+import com.ecommerce.model.Order;
+import com.ecommerce.model.OrderItem;
+import com.ecommerce.model.OrderStatus;
+import com.ecommerce.model.User;
 import com.ecommerce.repository.OrderRepository;
 import com.ecommerce.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.sql.ClientInfoStatus;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class OrderService {
 
     private final CartService cartService;
-    private final UserRepository  userRepository;
+    private final UserRepository userRepository;
     private final OrderRepository orderRepository;
 
     public Optional<OrderResponse> createOrder(String userId) {
 
-        //validate for cart items
-        List<CartItem> cartItems = cartService.getCartItems(userId);
-        if(cartItems.isEmpty()){
+        // Validate user ID
+        if (userId == null || userId.isBlank()) {
             return Optional.empty();
         }
-        // validate for user
-        Optional<User> userOptional = userRepository.findById(Long.valueOf(userId));
-        if(userOptional.isEmpty()){
+
+        Long userIdLong;
+
+        try {
+            userIdLong = Long.valueOf(userId);
+        } catch (NumberFormatException e) {
+            return Optional.empty();
+        }
+
+        // Get cart items
+        List<CartItem> cartItems =
+                cartService.getCartItemEntities(userId);
+
+        // Validate cart
+        if (cartItems.isEmpty()) {
+            return Optional.empty();
+        }
+
+        // Find user
+        Optional<User> userOptional =
+                userRepository.findById(userIdLong);
+
+        if (userOptional.isEmpty()) {
             return Optional.empty();
         }
 
         User user = userOptional.get();
 
-        //calculate total price
-        BigDecimal totalPrice= cartItems.stream()
+        // Calculate total price
+        BigDecimal totalPrice = cartItems.stream()
                 .map(CartItem::getPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        //create order
 
+        // Create order
         Order order = new Order();
+
         order.setUser(user);
         order.setStatus(OrderStatus.CONFIRMED);
         order.setTotalAmount(totalPrice);
 
-        List<OrderItem> orderItems= cartItems.stream()
+        // Create order items
+        List<OrderItem> orderItems = cartItems.stream()
                 .map(item -> new OrderItem(
                         null,
                         item.getProduct(),
@@ -59,30 +81,41 @@ public class OrderService {
                 ))
                 .toList();
 
+        // Add items to order
         order.setItems(orderItems);
-        Order savedOrder = orderRepository.save(order);
-        //clear the cart
 
+        // Save order
+        Order savedOrder = orderRepository.save(order);
+
+        // Clear cart
         cartService.clearCart(userId);
 
+        // Return response
         return Optional.of(mapToOrderResponse(savedOrder));
-
     }
 
     private OrderResponse mapToOrderResponse(Order order) {
+
         return new OrderResponse(
                 order.getId(),
                 order.getTotalAmount(),
                 order.getStatus(),
+
                 order.getItems().stream()
                         .map(orderItem -> new OrderItemDTO(
                                 orderItem.getId(),
                                 orderItem.getProduct().getId(),
                                 orderItem.getQuantity(),
                                 orderItem.getPrice(),
-                                orderItem.getPrice().multiply(new BigDecimal(orderItem.getQuantity()))
+                                orderItem.getPrice()
+                                        .multiply(
+                                                BigDecimal.valueOf(
+                                                        orderItem.getQuantity()
+                                                )
+                                        )
                         ))
                         .toList(),
+
                 order.getCreatedAt()
         );
     }
