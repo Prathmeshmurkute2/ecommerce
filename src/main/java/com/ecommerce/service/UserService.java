@@ -45,18 +45,19 @@ public class UserService {
 		user.setFirstName(userRequest.getFirstName());
 		user.setLastName(userRequest.getLastName());
 		user.setEmail(userRequest.getEmail());
-		user.setPhoneNo(user.getPhoneNo());
+		user.setPhoneNo(userRequest.getPhone());                     // fix 1: was user.getPhoneNo()
 
-		if(userRequest.getAddress() != null){
+		if (userRequest.getAddress() != null) {
 			Address address = new Address();
 
 			address.setStreet(userRequest.getAddress().getStreet());
 			address.setCity(userRequest.getAddress().getCity());
-			address.setState(userRequest.getAddress().getCity());
+			address.setState(userRequest.getAddress().getState());   // fix 3: was .getCity()
 			address.setCountry(userRequest.getAddress().getCountry());
 			address.setZipcode(userRequest.getAddress().getZipcode());
-		}
 
+			user.setAddress(address);                                // fix 2: was missing entirely
+		}
 	}
 
 
@@ -76,7 +77,7 @@ public class UserService {
 	    		}).orElse(false);
 	}
 
-	private UserResponse mapToUseResponse(User user){
+	private UserResponse mapToUseResponse(User user) {
 		UserResponse response = new UserResponse();
 		response.setId(String.valueOf(user.getId()));
 		response.setFirstName(user.getFirstName());
@@ -85,13 +86,15 @@ public class UserService {
 		response.setPhone(user.getPhoneNo());
 		response.setRole(user.getRole());
 
-		if(user.getAddress()!= null){
+		if (user.getAddress() != null) {
 			AddressDTO addressDTO = new AddressDTO();
 			addressDTO.setStreet(user.getAddress().getStreet());
 			addressDTO.setCity(user.getAddress().getCity());
 			addressDTO.setState(user.getAddress().getState());
 			addressDTO.setCountry(user.getAddress().getCountry());
 			addressDTO.setZipcode(user.getAddress().getZipcode());
+
+			response.setAddress(addressDTO);                         // fix 4: was missing entirely
 		}
 		return response;
 	}
