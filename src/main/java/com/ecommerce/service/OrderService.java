@@ -2,6 +2,7 @@ package com.ecommerce.service;
 
 import com.ecommerce.dto.OrderItemDTO;
 import com.ecommerce.dto.OrderResponse;
+import com.ecommerce.exception.ResourceNotFoundException;
 import com.ecommerce.model.CartItem;
 import com.ecommerce.model.Order;
 import com.ecommerce.model.OrderItem;
@@ -118,5 +119,28 @@ public class OrderService {
 
                 order.getCreatedAt()
         );
+    }
+
+    public List<OrderResponse> getOrdersForUser(String userId) {
+        Long userIdLong = parseUserId(userId);
+
+        User user = userRepository.findById(userIdLong)
+                .orElseThrow(()->new ResourceNotFoundException("User not found: "+ userId));
+
+        return orderRepository.findByUserOrderByCreatedAtDesc(user).stream()
+                .map(this::mapToOrderResponse)
+                .toList();
+    }
+
+    private Long parseUserId(String userId) {
+        if(userId == null || userId.isBlank()){
+            throw new IllegalArgumentException("User id is required.");
+        }
+        try{
+            return Long.valueOf(userId);
+
+        }catch(NumberFormatException e){
+            throw new IllegalArgumentException("Invalid userId: "+ userId);
+        }
     }
 }
